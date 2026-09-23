@@ -9,8 +9,10 @@ data/
 outputs/
 
 # The fine-tuned weights live on the Hugging Face Hub (they are ~240 MB, past
-# what GitHub will accept); asumi_tts fetches them on first run.
+# what GitHub will accept); asumi_tts fetches them on first run. The Hub client
+# leaves its download cache beside them.
 *.safetensors
+model_assets/asu/.cache/
 
 # Python
 __pycache__/

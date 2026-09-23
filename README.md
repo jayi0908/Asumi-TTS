@@ -38,6 +38,14 @@ python fetch_model.py
 
 权重不下载也没关系：第一次合成时 `asumi_tts` 会自己去 Hub 取（同样需要 token）。
 
+> 如果 `resolve/` 卡住或超时，说明 Hub 的 CDN 在当前网络不可达（上传走的是 API，
+> 通常是通的；下载会 302 到 CDN）。挂镜像即可：
+>
+> ```bash
+> export HF_ENDPOINT=https://hf-mirror.com
+> python fetch_model.py
+> ```
+
 等价的原始命令（应用就是用这条拉起的），需要时用 `SBV2_ROOT` 指向框架：
 
 ```bash
