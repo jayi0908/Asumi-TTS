@@ -84,6 +84,7 @@ class AsumiTTSEngine:
         model_file: str = DEFAULT_MODEL_FILE,
         device: str = "mps",
         style: str = "Neutral",
+        warmup: bool | None = None,
     ) -> None:
         if str(SBV2_ROOT) not in sys.path:
             sys.path.insert(0, str(SBV2_ROOT))
@@ -123,6 +124,42 @@ class AsumiTTSEngine:
         )
         self._tts.load()
         self._lock = threading.Lock()
+
+        # Off by default: a one-shot CLI/API call pays the BERT load either way,
+        # so warming first would only add a throwaway synthesis. The HTTP server
+        # passes warmup=True, where it moves the cost to start-up instead of the
+        # user's first utterance. ASUMI_WARMUP can force it either way.
+        if warmup is None:
+            warmup = os.environ.get("ASUMI_WARMUP", "0").strip().lower() not in (
+                "0", "false", "no", "off",
+            )
+        if warmup:
+            self.warmup()
+
+    def warmup(self) -> float:
+        """Run one throwaway synthesis so the first real request is fast.
+
+        The JP BERT (tokenizer plus a ~1.3 GB model) and the MPS kernels are
+        loaded lazily on the first `infer()`, which costs ~10 s. Doing it here
+        moves that cost to start-up instead of the user's first utterance.
+        Returns the number of seconds it took; never raises.
+        """
+        import time
+
+        started = time.time()
+        try:
+            with self._lock:
+                self._tts.infer(
+                    "これはウォームアップのためのテスト文です。",
+                    language=self._Languages.JP,
+                    speaker_id=0,
+                    style=self.style,
+                )
+        except Exception as error:  # pragma: no cover - never break start-up
+            print(f"[asumi_tts] warm-up failed: {error}")
+        elapsed = time.time() - started
+        print(f"[asumi_tts] warm-up finished in {elapsed:.1f}s")
+        return elapsed
 
     def speak(
         self,

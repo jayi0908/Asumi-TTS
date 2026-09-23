@@ -46,7 +46,14 @@ class TTSRequest(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _engine
-    _engine = AsumiTTSEngine(device=DEVICE)
+    # Warm up here, not in the engine: the server answers many requests, so
+    # paying the JP BERT load at start-up keeps the first /tts call fast
+    # (~1 s instead of ~12 s). Set ASUMI_WARMUP=0 to trade that back.
+    warmup = os.environ.get("ASUMI_WARMUP", "1").strip().lower() not in (
+        "0", "false", "no", "off",
+    )
+    _engine = AsumiTTSEngine(device=DEVICE, warmup=warmup)
+    print(f"[asumi_tts] engine ready on {DEVICE}", flush=True)
     yield
     _engine = None
 

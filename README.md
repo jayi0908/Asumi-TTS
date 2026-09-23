@@ -52,7 +52,7 @@ curl -X POST http://127.0.0.1:8077/tts -H 'Content-Type: application/json' \
      -d '{"text":"こんにちは、亜澄です。"}' --output hello.wav
 ```
 
-首次调用会加载模型（约 5s），之后每句话约 0.7s。
+启动时会预热（加载 JP BERT 并跑一次合成，约 10s），**预热完成后**每句话约 0.7–1.5s。若不需要预热（例如希望服务秒起、接受首次请求变慢），设 `ASUMI_WARMUP=0`。
 
 ### Python API
 

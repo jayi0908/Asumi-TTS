@@ -93,4 +93,4 @@ asumi_tts/
 - **端口占用**：改 `--port`。
 - **想用 CPU**：`device="cpu"`（或设环境变量 `ASUMI_DEVICE=cpu`），更慢但更省内存。
 - **模型路径**：可用环境变量覆盖 `SBV2_ROOT` / `ASUMI_MODEL_DIR` / `ASUMI_MODEL`。
-- **首次加载**：约 2–5 秒（含 BERT 与词典初始化）。
+- **首次加载**：服务启动时预热约 10 秒（加载 JP BERT + 词典，跑一次合成）；之后单句约 0.7–1.5 秒。设 `ASUMI_WARMUP=0` 可跳过预热（服务秒起，但首句变慢）。
