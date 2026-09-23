@@ -1,0 +1,20 @@
+# Local-only working material.
+#
+# The training intermediates are reproducible from the pipeline in scripts/,
+# and the source audio is copyrighted game material that is deliberately not
+# part of this repository.
+processed/
+build/
+data/
+outputs/
+
+# The fine-tuned weights live on the Hugging Face Hub (they are ~240 MB, past
+# what GitHub will accept); asumi_tts fetches them on first run.
+*.safetensors
+
+# Python
+__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store

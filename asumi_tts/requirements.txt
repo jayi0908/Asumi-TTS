@@ -1,0 +1,15 @@
+# Runtime dependencies for the Asumi TTS package.
+# In practice the whole Style-Bert-VITS2 stack is required; the easiest way is
+# to use the existing conda env `sbv2` (see ../README.md).  These are the
+# direct imports used by this package:
+numpy
+soundfile
+torch
+torchaudio
+transformers<5
+sentencepiece
+pyopenjtalk-dict
+fastapi
+uvicorn[standard]
+requests
+huggingface_hub  # only to fetch the weights from the Hub on first run
