@@ -25,7 +25,20 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--text", action="append", help="repeatable")
     ap.add_argument("--text-file", help="one utterance per line")
     ap.add_argument("--out", required=True, help="output .wav or directory")
-    ap.add_argument("--device", default="mps", choices=["mps", "cpu"])
+    ap.add_argument(
+        "--device",
+        default=None,
+        choices=["onnx", "dml", "cpu", "cuda", "mps"],
+        help="onnx = ONNX Runtime on CPU; dml = ONNX/DirectML (Windows GPU); "
+        "default: auto-detect",
+    )
+    ap.add_argument(
+        "--onnx-bert",
+        default=None,
+        choices=["fp16", "fp32"],
+        help="JP ONNX BERT precision (default: fp16; fp32 is ~1.3 GB and "
+        "closer to the PyTorch path)",
+    )
     ap.add_argument("--style", default="Neutral")
     ap.add_argument("--intonation-scale", type=float, default=1.0)
     ap.add_argument("--length", type=float, default=1.0, help="speaking rate (>1 slower)")
@@ -37,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
     if not texts:
         ap.error("provide at least one --text or --text-file")
 
-    tts = AsumiTTSEngine(device=args.device, style=args.style)
+    tts = AsumiTTSEngine(device=args.device, style=args.style, onnx_bert=args.onnx_bert)
     out = Path(args.out)
     multi = len(texts) > 1
     if multi:

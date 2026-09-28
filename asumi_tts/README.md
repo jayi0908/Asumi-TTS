@@ -4,7 +4,7 @@
 提供 Python API / 命令行 / HTTP 微服务三种调用方式。
 
 - 模型：`asu_e40_s9200.safetensors`（JP-Extra，40 epoch / 9200 步，最佳 checkpoint）
-- 设备：Apple M4 上走 **MPS**，热身后约 **2x 实时**，内存约 3.5 GB
+- 设备：Apple M4 上走 **MPS**；Windows 默认 **ONNX Runtime / CPU**（`device="onnx"`）；有 CUDA 用 `cuda`
 - 语言：**仅日语**（JP-Extra）。输入日文文本，输出 44.1 kHz 单声道 wav
 - 专有名词：内置用户词典（`亜澄 → アスミ`、`錦亜澄 → ニシキアスミ`）
 
@@ -18,7 +18,7 @@
 ```python
 from asumi_tts import AsumiTTSEngine
 
-tts = AsumiTTSEngine(device="mps")          # 只加载一次
+tts = AsumiTTSEngine(device="onnx")          # Windows；macOS 用 mps，CUDA 用 cuda
 sr, wav = tts.speak("おはよう、亜澄だよ。")   # sr=44100, wav=float32 numpy
 tts.speak_to_file("また明日も会えるといいな。", "hello.wav")
 ```
@@ -51,7 +51,7 @@ conda run -n sbv2 python -m uvicorn asumi_tts.server:app --host 127.0.0.1 --port
 
 | 方法 | 路径 | 请求 | 返回 |
 |---|---|---|---|
-| GET | `/health` | — | `{"status":"ok","device":"mps"}` |
+| GET | `/health` | — | `{"status":"ok","device":"dml"}` |
 | POST | `/tts` | `{"text":"...", "style":"Neutral", "intonation_scale":1.0, "length":1.0}` | `audio/wav` 二进制 |
 | POST | `/tts/base64` | 同上 | `{"sample_rate":44100,"format":"pcm_s16le","audio_base64":"..."}` |
 
@@ -82,6 +82,7 @@ Python 客户端示例见 `examples/http_client.py`。
 ```
 asumi_tts/
   engine.py            核心引擎（加载模型 + speak）
+  export_onnx.py       把 safetensors 导出为 ONNX（DirectML 路径用，免 PyTorch BERT）
   cli.py               命令行
   server.py            FastAPI 服务
   examples/            python_api.py, http_client.py
@@ -91,6 +92,10 @@ asumi_tts/
 ## 常见问题
 
 - **端口占用**：改 `--port`。
-- **想用 CPU**：`device="cpu"`（或设环境变量 `ASUMI_DEVICE=cpu`），更慢但更省内存。
-- **模型路径**：可用环境变量覆盖 `SBV2_ROOT` / `ASUMI_MODEL_DIR` / `ASUMI_MODEL`。
-- **首次加载**：服务启动时预热约 10 秒（加载 JP BERT + 词典，跑一次合成）；之后单句约 0.7–1.5 秒。设 `ASUMI_WARMUP=0` 可跳过预热（服务秒起，但首句变慢）。
+- **想用 CPU**：`device="cpu"`（或设环境变量 `ASUMI_DEVICE=cpu`），走 PyTorch，更慢但更省内存（需 1.3 GB PyTorch BERT）。
+- **Windows**：默认 `device="onnx"`，走 ONNX Runtime / CPU，首次会自动下载 JP ONNX BERT（约 650 MB）并把权重导出成 ONNX。需要 `onnxruntime-directml`（见 `requirements.txt`）。
+- **DirectML（`device="dml"`）**：能用核显，但每个新输入长度都要重编译内核（约 13 s），自由文本每句都会等，实测比 CPU 慢约 9 倍，除非输入长度固定，否则不建议。
+- **模型路径**：可用环境变量覆盖 `SBV2_ROOT` / `ASUMI_MODEL_DIR` / `ASUMI_MODEL` / `ASUMI_DEVICE`。
+- **JP BERT 精度**：ONNX 路径默认用框架的 fp16 BERT（约 650 MB）。若觉得比 Mac/MPS 情绪淡，设 `ASUMI_ONNX_BERT=fp32`（或 CLI `--onnx-bert fp32`）切到 fp32（约 1.3 GB，首次自动下载）；合成器两条路径都是 fp32。
+- **情感强度**：服务端默认值可用环境变量覆盖（Agent 只发 `text`，所以以这里为准）：`ASUMI_SDP_RATIO`（默认 0.2，调高更有起伏）、`ASUMI_NOISE`、`ASUMI_NOISE_W`、`ASUMI_INTONATION_SCALE`、`ASUMI_LENGTH`、`ASUMI_STYLE`。设完重启服务生效。
+- **首次加载**：服务启动时预热（加载 JP BERT + 词典，跑一次合成）；之后按设备单句亚秒到数秒。设 `ASUMI_WARMUP=0` 可跳过预热（服务秒起，但首句变慢）。

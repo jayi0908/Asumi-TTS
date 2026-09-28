@@ -10,8 +10,10 @@ outputs/
 
 # The fine-tuned weights live on the Hugging Face Hub (they are ~240 MB, past
 # what GitHub will accept); asumi_tts fetches them on first run. The Hub client
-# leaves its download cache beside them.
+# leaves its download cache beside them. The .onnx next to them is exported from
+# the safetensors on first use (see asumi_tts/export_onnx.py), so it is local too.
 *.safetensors
+*.onnx
 model_assets/asu/.cache/
 
 # Python

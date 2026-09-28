@@ -2,7 +2,7 @@
 # In practice the whole Style-Bert-VITS2 stack is required; the easiest way is
 # to use the existing conda env `sbv2` (see ../README.md).  These are the
 # direct imports used by this package:
-numpy
+numpy<2  # Style-Bert-VITS2 pins this: PyOpenJTalk's C extension is built for 1.x
 soundfile
 torch
 torchaudio
@@ -13,3 +13,17 @@ fastapi
 uvicorn[standard]
 requests
 huggingface_hub  # only to fetch the weights from the Hub on first run
+
+# Pulled in by style_bert_vits2 at import time (inference genuinely needs them,
+# even though our own code never imports them directly):
+numba
+loguru
+num2words
+pyworld-prebuilt
+setuptools<81  # pyopenjtalk-dict imports pkg_resources; 81+ dropped it
+
+# The ONNX/DirectML path (Windows GPU). `onnxruntime-directml` replaces the
+# plain `onnxruntime`; onnx/onnxsim are only needed to export the weights once.
+onnxruntime-directml; sys_platform == "win32"
+onnx
+onnxsim-prebuilt

@@ -27,20 +27,39 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
-from .engine import AsumiTTSEngine
+from .engine import AsumiTTSEngine, default_device
 
-DEVICE = os.environ.get("ASUMI_DEVICE", "mps")
+DEVICE = default_device()
+STYLE = os.environ.get("ASUMI_STYLE", "Neutral")
 _engine: AsumiTTSEngine | None = None
+
+
+def _env_float(name: str, default: float) -> float:
+    """Read a numeric override from the environment, ignoring junk."""
+    try:
+        return float(os.environ[name])
+    except (KeyError, ValueError):
+        return default
+
+
+# Speech defaults. The Agent sends only `text`, so these are what actually
+# decide how lively the output is; overriding them (e.g. ASUM_ SDP_RATIO=0.4)
+# tunes expressiveness without touching the app.
+DEFAULT_INTONATION_SCALE = _env_float("ASUMI_INTONATION_SCALE", 1.0)
+DEFAULT_LENGTH = _env_float("ASUMI_LENGTH", 1.0)
+DEFAULT_SDP_RATIO = _env_float("ASUMI_SDP_RATIO", 0.2)
+DEFAULT_NOISE = _env_float("ASUMI_NOISE", 0.667)
+DEFAULT_NOISE_W = _env_float("ASUMI_NOISE_W", 0.8)
 
 
 class TTSRequest(BaseModel):
     text: str
     style: str | None = None
-    intonation_scale: float = 1.0
-    length: float = 1.0
-    sdp_ratio: float = 0.2
-    noise: float = 0.667
-    noise_w: float = 0.8
+    intonation_scale: float = DEFAULT_INTONATION_SCALE
+    length: float = DEFAULT_LENGTH
+    sdp_ratio: float = DEFAULT_SDP_RATIO
+    noise: float = DEFAULT_NOISE
+    noise_w: float = DEFAULT_NOISE_W
 
 
 @asynccontextmanager
@@ -52,7 +71,7 @@ async def lifespan(app: FastAPI):
     warmup = os.environ.get("ASUMI_WARMUP", "1").strip().lower() not in (
         "0", "false", "no", "off",
     )
-    _engine = AsumiTTSEngine(device=DEVICE, warmup=warmup)
+    _engine = AsumiTTSEngine(device=DEVICE, warmup=warmup, style=STYLE)
     print(f"[asumi_tts] engine ready on {DEVICE}", flush=True)
     yield
     _engine = None
